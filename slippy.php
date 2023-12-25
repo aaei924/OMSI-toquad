@@ -5,10 +5,12 @@
  * modified for naver, kakao map (PRASEOD-)
  */
 // test coord 55906 25426 16
-$acceptableSource = ['bing', 'google', 'yandex', 'naver', 'kakao'];
+include '../setenv.php';
+
+$acceptedSource = ['bing', 'google', 'yandex', 'naver', 'kakao'];
 
 // validity check
-if (!in_array($_GET['service'], $acceptableSource))
+if (!in_array($_GET['service'], $acceptedSource))
     $provider="bing";
 else
     $provider = $_GET['service'];
@@ -25,10 +27,11 @@ switch ($provider){
         $query = [
             'mapVersion' => 'v1',
             'output' => 'json',
-            'key' => $_GET['apikey']
+            'key' => getenv('BINGMAPS_APIKEY')
         ];
 
         $endpoint = 'http://dev.virtualearth.net/REST/V1/Imagery/Metadata/'.$_GET['type'].'?'.http_build_query($query);
+
         $resp = file_get_contents($endpoint);
 
         if($resp) {
@@ -47,6 +50,11 @@ switch ($provider){
         $acceptedMapTypes = ['roadmap', 'satellite', 'terrain', 'hybrid'];
         if(!in_array($_GET['type'], $acceptedMapTypes))
             $_GET['type']="satellite";
+        
+        if(in_array($_GET['format'], $acceptedExt))
+            $format=$_GET['format'];
+        else
+            $format="png";
 
         if(isset($_GET['hres'])) {
             if($_GET['hres']=="1") {
@@ -60,11 +68,6 @@ switch ($provider){
             $res="256x256";
             $scale="1";
         }
-        
-        if(in_array($_GET['format'], $acceptedExt))
-            $format=$_GET['format'];
-        else
-            $format="png";
 
         $query = [
             'center' => toLatLong($_GET['x'], $_GET['y'], $_GET['z'], 1),
@@ -74,7 +77,7 @@ switch ($provider){
             'scale' => $scale,
             'sensor' => false,
             'format' => $format,
-            'key' => $_GET['apikey']
+            'key' => getenv('GCLOUD_APIKEY')
         ];
         
         Header('Content-Type: image/'.$format);
@@ -88,7 +91,7 @@ switch ($provider){
             'z' => $_GET['z'],
             'l' => $_GET['type'],
             'size' => '256,256',
-            'apikey' => $_GET['apikey']
+            'apikey' => getenv('YANDEXMAP_APIKEY')
         ];
         
         header('Content-Type: image/jpeg');
@@ -102,7 +105,7 @@ switch ($provider){
             $_GET['type']="satellite_base";
 
         if(!in_array($_GET['format'], $acceptedExt))
-            $_GET['format']="png";
+            $_GET['format']="jpeg";
 
         if(!isset($_GET['keyid']))
             $_GET['keyid'] = '';
@@ -113,10 +116,10 @@ switch ($provider){
             $scale = 1;
 
         $query = [
-            'w' => 512,
-            'h' => 512,
+            'w' => 256,
+            'h' => 256,
             'center' => toLatLong($_GET['x'], $_GET['y'], $_GET['z']),
-            'level' => $_GET['z'],
+            'level' => $_GET['z'] - 1,
             'maptype' => $_GET['type'],
             'format' => $_GET['format'],
             'scale' => $scale
@@ -128,8 +131,8 @@ switch ($provider){
             'http' => [
                 'method' => 'GET',
                 'ignore_errors' => true,
-                'header' => 'X-NCP-APIGW-API-KEY-ID:'.$_GET['keyid']."\r\n".
-                            'X-NCP-APIGW-API-KEY:'.$_GET['apikey']
+                'header' => 'X-NCP-APIGW-API-KEY-ID:'.getenv('NCLOUD_KEYID')."\r\n".
+                            'X-NCP-APIGW-API-KEY:'.getenv('NCLOUD_APIKEY')
             ]
         ]);
 
@@ -148,7 +151,7 @@ switch ($provider){
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
-                'header' => 'Authorization:KakaoAK '.$_GET['apikey']
+                'header' => 'Authorization:KakaoAK '.getenv('KAKAO_RESTKEY')
             ]
         ]);
 
@@ -158,9 +161,6 @@ switch ($provider){
             'input_coord' => 'WGS84',
             'output_coord' => 'WCONGNAMUL'
         ];
-
-        if($_GET['type'] == 'HYBRID')
-            $query['RDR'] = 'HybridRender';
 
         if($_GET['type'] == 'ROADMAP')
             $typ = '';
@@ -180,7 +180,10 @@ switch ($provider){
             'service' => 'open'
         ];
 
-        $endpoint = 'https://spi.maps.daum.net/map2/map/skyviewimageservice?'.http_build_query($query);
+        if($_GET['type'] == 'HYBRID')
+            $query['RDR'] = 'HybridRender';
+
+        $endpoint = 'https://spi.maps.daum.net/map2/map/'.$typ.'imageservice?'.http_build_query($query);
 
         Header('Content-Type: image/jpeg');
         echo file_get_contents($endpoint, context: $context);
