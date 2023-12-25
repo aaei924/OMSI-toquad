@@ -49,45 +49,36 @@ switch ($provider){
         $acceptedExt = ['png', 'png8', 'png32', 'gif', 'jpg', 'jpg-baseline'];
         $acceptedMapTypes = ['roadmap', 'satellite', 'terrain', 'hybrid'];
         if(!in_array($_GET['type'], $acceptedMapTypes))
-            $_GET['type']="satellite";
+            $_GET['type'] = 'satellite';
         
-        if(in_array($_GET['format'], $acceptedExt))
-            $format=$_GET['format'];
-        else
-            $format="png";
+        if(!in_array($_GET['format'], $acceptedExt))
+            $_GET['format'] = 'png';
 
-        if(isset($_GET['hres'])) {
-            if($_GET['hres']=="1") {
-                $scale="2";
-                $res="256x256";
-            } elseif($_GET['hres']=="2") {
-                $res="512x512";
-                $scale="1";
-            }
-        } else {
-            $res="256x256";
-            $scale="1";
-        }
+        if(!in_array($_GET['hres'], [2,1]))
+            $_GET['hres'] = 1;
+
+        $res = strval(256 * $_GET['hres']);
+        $scale = [2,1][$_GET['hres'] - 1];
 
         $query = [
-            'center' => toLatLong($_GET['x'], $_GET['y'], $_GET['z'], 1),
+            'center' => implode(',', toLatLong($_GET['x'], $_GET['y'], $_GET['z'])),
             'maptype' => $_GET['type'],
             'zoom' => $_GET['z'],
-            'size' => $res,
+            'size' => $res.'x'.$res,
             'scale' => $scale,
             'sensor' => false,
-            'format' => $format,
+            'format' => $_GET['format'],
             'key' => getenv('GCLOUD_APIKEY')
         ];
         
-        Header('Content-Type: image/'.$format);
+        Header('Content-Type: image/'.$_GET['format']);
         echo file_get_contents('http://maps.googleapis.com/maps/api/staticmap?'.http_build_query($query));
     break;
     case "yandex":
         // aerial not available
         $query = [
             'lang' => 'en_US',
-            'll' => toLatLong($_GET['x'], $_GET['y'], $_GET['z']),
+            'll' => implode(',', array_reverse(toLatLong($_GET['x'], $_GET['y'], $_GET['z']))),
             'z' => $_GET['z'],
             'l' => $_GET['type'],
             'size' => '256,256',
@@ -110,19 +101,17 @@ switch ($provider){
         if(!isset($_GET['keyid']))
             $_GET['keyid'] = '';
 
-        if(in_array($_GET['hres'], [1, 2]))
-            $scale = $_GET['hres'];
-        else
-            $scale = 1;
+        if(!in_array($_GET['hres'], [1, 2]))
+            $_GET['hres'] = 1;
 
         $query = [
             'w' => 256,
             'h' => 256,
-            'center' => toLatLong($_GET['x'], $_GET['y'], $_GET['z']),
+            'center' => implode(',', array_reverse(toLatLong($_GET['x'], $_GET['y'], $_GET['z']))),
             'level' => $_GET['z'] - 1,
             'maptype' => $_GET['type'],
             'format' => $_GET['format'],
-            'scale' => $scale
+            'scale' => $_GET['hres']
         ];
 
         $endpoint = 'https://naveropenapi.apigw.ntruss.com/map-static/v2/raster?'.http_build_query($query);
@@ -143,7 +132,7 @@ switch ($provider){
         // zoom 최대치 14; 확대 레벨 역순
         // 항공사진 어긋남 있어 권장되지 않음
         $acceptedMapTypes = ['ROADMAP', 'SKYVIEW', 'HYBRID'];
-        $coord = explode(',', toLatLong($_GET['x'], $_GET['y'], $_GET['z']));
+        $coord = toLatLong($_GET['x'], $_GET['y'], $_GET['z']);
 
         if(!in_array($_GET['type'], $acceptedMapTypes))
             $_GET['type']="SKYVIEW";
@@ -156,8 +145,8 @@ switch ($provider){
         ]);
 
         $query = [
-            'x' => $coord[0],
-            'y' => $coord[1],
+            'x' => $coord['lon'],
+            'y' => $coord['lat'],
             'input_coord' => 'WGS84',
             'output_coord' => 'WCONGNAMUL'
         ];
@@ -192,7 +181,7 @@ switch ($provider){
 /**
  * Slippy Map Tilename to bing quadKey
  */
-function toQuad($tileX, $tileY, $levelOfDetail) {
+function toQuad($tileX, $tileY, $levelOfDetail): string {
     $quadKey = '';
     for ($i = $levelOfDetail; $i > 0; $i--) {
         $digit = '0';
@@ -211,15 +200,10 @@ function toQuad($tileX, $tileY, $levelOfDetail) {
 
 /**
  * Slippy Map Tilename to WGS84
- * @param string $d delimiter between lon. and lat.
  */
-function toLatLong($x, $y, $z, $latlon = 0, $d = ',') {
+function toLatLong($x, $y, $z): array {
     $n = pow(2, $z);
     $lon_deg = ($x+0.5) / $n * 360.0 - 180.0;
     $lat_deg = rad2deg(atan(sinh(pi() * (1 - 2 * ($y+0.5) / $n))));
-    if($latlon == 0)
-        $return_string = $lon_deg.$d.$lat_deg;
-    elseif($latlon == 1)
-        $return_string = $lat_deg.$d.$lon_deg;
-    return $return_string;
+    return ['lat' => $lat_deg, 'lon' => $lon_deg];
 }
