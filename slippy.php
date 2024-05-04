@@ -31,7 +31,6 @@ switch ($provider){
         ];
 
         $endpoint = 'http://dev.virtualearth.net/REST/V1/Imagery/Metadata/'.$_GET['type'].'?'.http_build_query($query);
-
         $resp = file_get_contents($endpoint);
 
         if($resp) {
@@ -115,7 +114,6 @@ switch ($provider){
         ];
 
         $endpoint = 'https://naveropenapi.apigw.ntruss.com/map-static/v2/raster?'.http_build_query($query);
-
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
@@ -125,7 +123,7 @@ switch ($provider){
             ]
         ]);
 
-        Header('Content-Type: image/jpeg');
+        Header('Content-Type: image/'.$_GET['format']);
         echo file_get_contents($endpoint, context: $context);
     break;
     case 'kakao':
