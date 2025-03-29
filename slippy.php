@@ -5,7 +5,10 @@
  * modified for naver, kakao map (PRASEOD-)
  */
 // test coord 55906 25426 16
-include '../setenv.php';
+require 'vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__.'/../');
+$dotenv->load();
 
 $acceptedSource = ['bing', 'google', 'yandex', 'naver', 'kakao'];
 
@@ -27,7 +30,7 @@ switch ($provider){
         $query = [
             'mapVersion' => 'v1',
             'output' => 'json',
-            'key' => getenv('BINGMAPS_APIKEY')
+            'key' => $_ENV['BINGMAPS_APIKEY']
         ];
 
         $endpoint = 'http://dev.virtualearth.net/REST/V1/Imagery/Metadata/'.$_GET['type'].'?'.http_build_query($query);
@@ -67,7 +70,7 @@ switch ($provider){
             'scale' => $scale,
             'sensor' => false,
             'format' => $_GET['format'],
-            'key' => getenv('GCLOUD_APIKEY')
+            'key' => $_ENV['GCLOUD_APIKEY']
         ];
         
         Header('Content-Type: image/'.$_GET['format']);
@@ -81,7 +84,7 @@ switch ($provider){
             'z' => $_GET['z'],
             'l' => $_GET['type'],
             'size' => '256,256',
-            'apikey' => getenv('YANDEXMAP_APIKEY')
+            'apikey' => $_ENV['YANDEXMAP_APIKEY']
         ];
         
         header('Content-Type: image/jpeg');
@@ -118,8 +121,8 @@ switch ($provider){
             'http' => [
                 'method' => 'GET',
                 'ignore_errors' => true,
-                'header' => 'X-NCP-APIGW-API-KEY-ID:'.getenv('NCLOUD_KEYID')."\r\n".
-                            'X-NCP-APIGW-API-KEY:'.getenv('NCLOUD_APIKEY')
+                'header' => 'X-NCP-APIGW-API-KEY-ID:'.$_ENV['NCLOUD_KEYID']."\r\n".
+                            'X-NCP-APIGW-API-KEY:'.$_ENV['NCLOUD_APIKEY']
             ]
         ]);
 
@@ -138,7 +141,7 @@ switch ($provider){
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
-                'header' => 'Authorization:KakaoAK '.getenv('KAKAO_RESTKEY')
+                'header' => 'Authorization:KakaoAK '.$_ENV['KAKAO_RESTKEY']
             ]
         ]);
 
